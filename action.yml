@@ -25,6 +25,9 @@ inputs:
   platforms:
     required: false
     default: "linux/amd64"
+  build_args:
+    required: false
+    default: ""
 
   DOCKERHUB_USER:
     required: true
@@ -80,3 +83,4 @@ runs:
         push: true
         tags: ${{ steps.metadata.outputs.tags }}
         labels: ${{ steps.metadata.outputs.labels }}
+        build-args: ${{ inputs.build_args }}
