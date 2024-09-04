@@ -49,6 +49,8 @@ runs:
           ${{ inputs.version }},suffix=${{ inputs.suffix_detailed }}
         flavor: |
           latest=false
+        labels: |
+          maintainer=${{ github.repository_owner }}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
