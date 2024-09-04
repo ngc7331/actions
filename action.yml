@@ -13,6 +13,9 @@ inputs:
   is_latest:
     required: false
     default: true
+  is_latest_no_suffix:
+    required: false
+    default: false
   is_nightly:
     required: false
     default: false
@@ -47,6 +50,7 @@ runs:
           ${{ inputs.DOCKERHUB_USER }}/${{ inputs.name }}
           ghcr.io/${{ github.repository_owner }}/docker-${{ inputs.name }}
         tags: |
+          latest,enable=${{ inputs.is_latest_no_suffix }}
           latest,enable=${{ inputs.is_latest }},suffix=${{ inputs.suffix }}
           nightly,enable=${{ inputs.is_nightly }},suffix=${{ inputs.suffix }}
           ${{ inputs.version }},suffix=${{ inputs.suffix_detailed }}
