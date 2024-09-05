@@ -53,7 +53,9 @@ runs:
           latest,enable=${{ inputs.is_latest_no_suffix }}
           latest,enable=${{ inputs.is_latest }},suffix=${{ inputs.suffix }}
           nightly,enable=${{ inputs.is_nightly }},suffix=${{ inputs.suffix }}
-          ${{ inputs.version }},suffix=${{ inputs.suffix_detailed }}
+          type=semver,value=${{ inputs.version }},suffix=${{ inputs.suffix_detailed }},pattern={{version}}
+          type=semver,value=${{ inputs.version }},suffix=${{ inputs.suffix_detailed }},pattern={{major}}.{{minor}}
+          type=semver,value=${{ inputs.version }},suffix=${{ inputs.suffix_detailed }},pattern={{major}}
         flavor: |
           latest=false
         labels: |
