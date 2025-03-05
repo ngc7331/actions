@@ -1,0 +1,66 @@
+name: update-check
+inputs:
+  cmd:
+    required: true
+  tag:
+    required: true
+  desp:
+    required: false
+    default: ""
+  env:
+    required: false
+    default: ""
+  version_file:
+    required: false
+    default: "README.md"
+  git_commit:
+    required: false
+    default: "false"
+  git_user:
+    required: false
+    default: ""
+  git_email:
+    required: false
+    default: ""
+
+outputs:
+  update:
+    description: "Update available"
+    value: ${{ steps.check.outputs.update }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check update
+      id: check
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.desp }}" ]; then
+          export desp=${{ inputs.tag }}
+        else
+          export desp=${{ inputs.desp }}
+        fi
+
+        for env in $(echo ${{ inputs.env }} | tr "," "\n"); do
+          export $env
+        done
+
+        export version=$(eval ${{ inputs.cmd }})
+        export local_version=$(grep -oP "(?<=${{ inputs.tag }}: ).*" ${{ inputs.version_file }})
+
+        if [ "$version" != "$local_version" ]; then
+          echo "Update available: $local_version -> $version"
+          if [ "${{ inputs.git_commit }}" == "true" ] && [ -n "${{ inputs.git_user }}" ] && [ -n "${{ inputs.git_email }}" ]; then
+            echo "Commit changes..."
+            sed -i "s/${{ inputs.tag }}: $local_version/${{ inputs.tag }}: $version/" ${{ inputs.version_file }}
+            git config --global user.email "${{ inputs.git_email }}"
+            git config --global user.name "${{ inputs.git_user }}"
+            git add ${{ inputs.version_file }}
+            git commit -m "[BOT] Update $desp to $version"
+            git push
+          fi
+          echo update=true >> $GITHUB_OUTPUT
+        else
+          echo "No update available: $local_version"
+          echo update=false >> $GITHUB_OUTPUT
+        fi
