@@ -10,9 +10,12 @@ inputs:
   env:
     required: false
     default: ""
+  local_mode:
+    required: false
+    default: "file" # file, submodule
   version_file:
     required: false
-    default: "README.md"
+    default: "README.md" # file path or submodule dir
   git_commit:
     required: false
     default: "false"
@@ -31,6 +34,35 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Verify config
+      shell: bash
+      run: |
+        if [ "${{ inputs.local_mode }}" == "file" ]; then
+          if [ ! -f "${{ inputs.version_file }}" ]; then
+            echo "version_file not found: ${{ inputs.version_file }}"
+            exit 1
+          fi
+        elif [ "${{ inputs.local_mode }}" == "submodule" ]; then
+          if [ ! -d "${{ inputs.version_file }}" ] || [ -z "$(git submodule status | grep ${{ inputs.version_file }})" ]; then
+            echo "submodule not found: ${{ inputs.version_file }}"
+            exit 1
+          fi
+        else
+          echo "local_mode must be 'file' or 'submodule', got ${{ inputs.local_mode }}"
+          exit 1
+        fi
+
+        if [ "${{ inputs.git_commit }}" == "true" ]; then
+          if [ -z "${{ inputs.git_user }}" ]; then
+            echo "git_user must be set when git_commit is true"
+            exit 1
+          fi
+          if [ -z "${{ inputs.git_email }}" ]; then
+            echo "git_email must be set when git_commit is true"
+            exit 1
+          fi
+        fi
+
     - name: Check update
       id: check
       shell: bash
@@ -46,13 +78,26 @@ runs:
         done
 
         export version=$(eval ${{ inputs.cmd }})
-        export local_version=$(grep -oP "(?<=${{ inputs.tag }}: ).*" ${{ inputs.version_file }})
+        if [ "${{ inputs.local_mode }}" == "submodule" ]; then
+          cd ${{ inputs.version_file }} && git fetch --tags && cd ..
+          export local_version=$(cd ${{ inputs.version_file }} && git describe --tags --abbrev=0)
+        else # if [ "${{ inputs.local_mode }}" == "file" ]
+          export local_version=$(grep -oP "(?<=${{ inputs.tag }}: ).*" ${{ inputs.version_file }})
+        fi
 
         if [ "$version" != "$local_version" ]; then
           echo "Update available: $local_version -> $version"
-          if [ "${{ inputs.git_commit }}" == "true" ] && [ -n "${{ inputs.git_user }}" ] && [ -n "${{ inputs.git_email }}" ]; then
-            echo "Commit changes..."
+
+          if [ "${{ inputs.local_mode }}" == "submodule" ]; then
+            echo "Update submodule..."
+            cd ${{ inputs.version_file }} && git checkout $version && cd ..
+          else # if [ "${{ inputs.local_mode }}" == "file" ]
+            echo "Update version file..."
             sed -i "s/${{ inputs.tag }}: $local_version/${{ inputs.tag }}: $version/" ${{ inputs.version_file }}
+          fi
+
+          if [ "${{ inputs.git_commit }}" == "true" ]; then
+            echo "Commit changes..."
             git config --global user.email "${{ inputs.git_email }}"
             git config --global user.name "${{ inputs.git_user }}"
             git add ${{ inputs.version_file }}
