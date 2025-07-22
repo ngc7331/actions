@@ -78,6 +78,13 @@ runs:
         done
 
         export version=$(eval ${{ inputs.cmd }})
+
+        if [ -z "$version" ]; then
+          echo "Failed to get new version"
+          echo update=false >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
         if [ "${{ inputs.local_mode }}" == "submodule" ]; then
           cd ${{ inputs.version_file }} && git fetch --tags && cd ..
           export local_version=$(cd ${{ inputs.version_file }} && git describe --tags --abbrev=0)
